@@ -1,6 +1,6 @@
 $(info $(SHELL))
 all:
-	zig cc ./src/main.c -o ./bin/cmakemore.exe -Wall -Wextra
+	zig cc ./src/main.c -o ./bin/cmakemore.exe -Wall -Wextra -g
 
 clean:
 	cd bin

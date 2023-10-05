@@ -1,3 +1,4 @@
+#include <float.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,7 +45,7 @@ void readNamesFromFile(const char *filename, char ***names, int *numNames) {
         }
 
         // Resize the array to store the new name
-        *names = realloc(*names, (*numNames + 1) * sizeof(char *));
+        *names = realloc(*names, ((*numNames) + 1) * sizeof(char *));
         if (*names == NULL) {
             perror("Memory allocation error");
             exit(1);
@@ -94,7 +95,7 @@ void printBigrams(char **names, int numNames, int numPrints){
     }
 }
 
-void countBigrams(char **names, int numNames, int (*counts)[28][28]){
+void countBigrams(char **names, int numNames, int **counts){
     for (int i = 0; i < numNames; i++) {
         char* name = names[i];
         size_t len = strlen(name);
@@ -114,12 +115,12 @@ void countBigrams(char **names, int numNames, int (*counts)[28][28]){
                 b = name[pos + 1] - ASCII_LOWER;
             }
             pos++;
-            (*counts)[a][b]++;
+            counts[a][b]++;
         }
     }
 }
 
-int mostFrequentBigram(int rows, int cols, int counts[rows][cols]){
+int mostFrequentBigram(int rows, int cols, int** counts){
     int max_count = -1;
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {
@@ -132,7 +133,7 @@ int mostFrequentBigram(int rows, int cols, int counts[rows][cols]){
     return max_count;
 }
 
-void norm_probs(int rows, int cols, int counts[rows][cols], float probs[rows][cols]){
+void norm_probs(int rows, int cols, int** counts, float** probs){
     for (int i = 0; i < rows; i++) {
         int c = 0;
         for (int j = 0; j < cols; j++) {
@@ -142,7 +143,7 @@ void norm_probs(int rows, int cols, int counts[rows][cols], float probs[rows][co
             probs[i][j] = (float)counts[i][j] / (float)c;
         }
     }
-    
+
 }
 
 void freeNames(char **names, int numNames){
@@ -152,23 +153,59 @@ void freeNames(char **names, int numNames){
     free(names);
 }
 
+void alloc_arrayf(float*** a){
+    *a = (float**)malloc( ROWS * sizeof(float*));
+    for (int row = 0; row < ROWS; row++){
+        (*a)[row] = (float*)malloc( COLS * sizeof(float*));
+    }
+    for (int row = 0; row < ROWS; row++){
+        for (int col = 0; col < ROWS; col++){
+            (*a)[row][col] = 0;
+        }
+    }
+
+}
+
+void alloc_array(int*** a){
+    *a = (int**)malloc( ROWS * sizeof(int*));
+    for (int row = 0; row < ROWS; row++){
+        (*a)[row] = (int*)malloc( COLS * sizeof(int*));
+    }
+    for (int row = 0; row < ROWS; row++){
+        for (int col = 0; col < ROWS; col++){
+            (*a)[row][col] = 0;
+        }
+    }
+}
+
 int main() {
     char **names = NULL;
     int numNames = 0;
-    // struct Bigram bigrams[756]; // permutations 28!/(28-2)!
-    int bigram_counts[ROWS][COLS] = {0};
-    float bigram_probs[ROWS][COLS] = {0};
+    int** bigram_counts = NULL;
+    float** bigram_probs = NULL;
     const char *filename = "names.txt"; // Change this to your file's name
 
+    printf("Allocating Arrays\n");
+
+    alloc_array(&bigram_counts);
+    alloc_arrayf(&bigram_probs);
+
+    printf("Read names from file\n");
     readNamesFromFile(filename, &names, &numNames);
-    countBigrams(names, numNames, &bigram_counts);
+
+    printf("Counting\n");
+    countBigrams(names, numNames, bigram_counts);
+
+    printf("Normalizing \n");
     norm_probs(ROWS, COLS, bigram_counts, bigram_probs);
 
-    int name_len = 8;
+    const int name_len = 9;
     char name[name_len + 1];
     name[0] = 'c';
     name[name_len] = '\0';
     int prev_ord = 0;
+
+    printf("Start eval\n");
     for (int n = 1; n < name_len; n++) {
         if (name[n-1] == '%') {
             prev_ord = NAME_START_NUM;
@@ -203,7 +240,9 @@ int main() {
     // printf("Generated name: %s", name);
 
     freeNames(names, numNames); // Free the array of names
-
+    free(bigram_probs);
+    free(bigram_counts);
+    while (1) {};
     return 0;
 }
 
